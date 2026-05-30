@@ -1,0 +1,1358 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RPS Risk</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      min-height: 100%;
+      background: #000;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+    }
+
+    #game-wrap {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background: #000;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .fallback {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      color: #fff;
+      background: #000;
+      text-align: center;
+      line-height: 1.45;
+      z-index: 10;
+    }
+
+    body.phaser-failed .fallback {
+      display: flex;
+    }
+  </style>
+</head>
+<body>
+  <main id="game-wrap">
+    <div class="fallback">
+      Phaser не загрузился. Проверь подключение к интернету и открой файл снова.
+    </div>
+  </main>
+
+  <script>
+    window.addEventListener('error', function (event) {
+      if (String(event.filename || '').includes('phaser')) {
+        document.body.classList.add('phaser-failed');
+      }
+    });
+  </script>
+
+  <script>
+    if (!window.Phaser) {
+      document.body.classList.add('phaser-failed');
+    } else {
+      (() => {
+        if (window.__game) window.__game.destroy(true);
+        document.getElementById('roundControls')?.remove();
+
+        class Example extends Phaser.Scene {
+          constructor() {
+            super();
+
+            this.buttons = {};
+            this.selected = null;
+            this.buttonsGroup = null;
+
+            this.enemies = {};
+            this.enemyCrosses = {};
+
+            this.roundText = null;
+            this.winAmountText = null;
+            this.chooseText = null;
+
+            this.startButton = null;
+            this.costText = null;
+            this.stopButton = null;
+            this.stopAmountText = null;
+            this.splitButton = null;
+            this.balanceText = null;
+            this.betText = null;
+            this.betPanel = null;
+
+            this.playerPickIcon = null;
+            this.enemyPickIcon = null;
+
+            this.confettiGroup = null;
+
+            this.currentRound = 1;
+            this.maxRound = 3;
+            this.roundStarted = false;
+            this.gameOver = false;
+            this.canStop = false;
+
+            this.balance = 1000;
+            this.bet = 10;
+            this.betOptions = [1, 2, 5, 10, 20, 50, 100, 500];
+            this.baseGameCost = 100;
+            this.currentWinAmount = 0;
+            this.safeWinAmount = 0;
+            this.stakePaid = false;
+            this.splitUsedThisDecision = false;
+            this.splitUsedThisGame = false;
+
+            this.lastDrawPercent = 0;
+            this.lastDrawAmount = 0;
+            this.lastRoundWinAmount = 0;
+
+            this.roundMultipliers = {
+              1: 1,
+              2: 10,
+              3: 20
+            };
+
+            this.roundTextOffsetX = -5;
+            this.roundTextOffsetY = -249;
+
+            this.chooseTextOffsetY = 367;
+
+            this.enemy2ActiveOffsetX = -62;
+            this.enemy2ActiveOffsetY = -29;
+
+            this.enemy1InactiveOffsetX = -59;
+            this.enemy1InactiveOffsetY = 74;
+
+            this.enemy2InactiveOffsetX = -97;
+            this.enemy2InactiveOffsetY = 3;
+
+            this.enemy3ActiveOffsetX = -29;
+            this.enemy3ActiveOffsetY = -21;
+          }
+
+          preload() {
+            this.load.image('bg', 'https://i.imgur.com/uQPPaAV.png');
+
+            this.load.image('rock_idle', 'https://i.imgur.com/Kx6WdeY.png');
+            this.load.image('rock_active', 'https://i.imgur.com/rGrhxky.png');
+
+            this.load.image('scissors_idle', 'https://i.imgur.com/0OnRFDi.png');
+            this.load.image('scissors_active', 'https://i.imgur.com/qpwuBUV.png');
+
+            this.load.image('paper_idle', 'https://i.imgur.com/t1axPIZ.png');
+            this.load.image('paper_active', 'https://i.imgur.com/asZkf3U.png');
+
+            this.load.image('enemy1_active', 'https://i.imgur.com/qqzJtP2.png');
+            this.load.image('enemy1_inactive', 'https://i.imgur.com/Q8sVYZo.png');
+
+            this.load.image('enemy2_active', 'https://i.imgur.com/6nlCAJh.png');
+            this.load.image('enemy2_inactive', 'https://i.imgur.com/pzbZ9uL.png');
+
+            this.load.image('enemy3_active', 'https://i.imgur.com/VFovX0a.png');
+            this.load.image('enemy3_inactive', 'https://i.imgur.com/4YahU8w.png');
+
+            this.load.image('enemy_cross', 'https://i.imgur.com/TXqt0i2.png');
+          }
+
+          create() {
+            this.createBackground();
+            this.createEnemies();
+            this.createButtonsHorizontal();
+            this.createStopButton();
+            this.createSplitButton();
+            this.createStartButton();
+            this.createCostText();
+            this.createChooseText();
+            this.createBalanceText();
+            this.createBetText();
+            this.createRoundText();
+            this.createWinAmountText();
+
+            this.setChoiceButtonsInitialInactive();
+            this.loadRoundFont();
+          }
+
+          loadRoundFont() {
+            if (!window.FontFace) return;
+
+            const font = new FontFace(
+              'RedRoseCustom',
+              'url(https://miracleagency.github.io/egg_factory/REDROSE-VARIABLEFONT_WGHT.TTF)'
+            );
+
+            font.load().then((loadedFont) => {
+              document.fonts.add(loadedFont);
+              this.roundText?.setFontFamily('RedRoseCustom');
+              this.winAmountText?.setFontFamily('RedRoseCustom');
+            }).catch(() => {
+              this.roundText?.setFontFamily('Arial');
+              this.winAmountText?.setFontFamily('Arial');
+            });
+          }
+
+          createBackground() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            const bg = this.add.image(width / 2, height / 2, 'bg');
+
+            const scaleX = width / bg.width;
+            const scaleY = height / bg.height;
+            const scale = Math.max(scaleX, scaleY);
+
+            bg.setScale(scale).setOrigin(0.5);
+          }
+
+          getGameCost() {
+            return this.bet * this.baseGameCost;
+          }
+
+          getRoundWinAmount(round = this.currentRound) {
+            return this.getGameCost() * this.roundMultipliers[round];
+          }
+
+          createBalanceText() {
+            const height = this.scale.height;
+
+            this.balanceText = this.add.text(40, height - 80, `BALANCE: ${this.balance}$`, {
+              fontFamily: 'Arial',
+              fontSize: '42px',
+              fontStyle: 'bold',
+              color: '#ffffff'
+            })
+              .setOrigin(0, 0.5)
+              .setDepth(100)
+              .setInteractive({ useHandCursor: true });
+
+            this.balanceText.on('pointerdown', () => {
+              this.balance += 1000;
+              this.updateBalanceText();
+            });
+          }
+
+          updateBalanceText() {
+            if (this.balanceText) {
+              this.balanceText.setText(`BALANCE: ${this.balance}$`);
+            }
+          }
+
+          createBetText() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.betText = this.add.text(width - 40, height - 80, `BET: ${this.bet}$`, {
+              fontFamily: 'Arial',
+              fontSize: '42px',
+              fontStyle: 'bold',
+              color: '#ffffff'
+            })
+              .setOrigin(1, 0.5)
+              .setDepth(100)
+              .setInteractive({ useHandCursor: true });
+
+            this.betText.on('pointerdown', () => {
+              if (this.stakePaid || this.roundStarted || this.gameOver) return;
+              this.toggleBetPanel();
+            });
+          }
+
+          updateBetText() {
+            if (this.betText) {
+              this.betText.setText(`BET: ${this.bet}$`);
+            }
+
+            this.updateCostText();
+          }
+
+          toggleBetPanel() {
+            if (this.betPanel) {
+              this.betPanel.destroy();
+              this.betPanel = null;
+              return;
+            }
+
+            this.openBetPanel();
+          }
+
+          openBetPanel() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.betPanel = this.add.container(width / 2, height / 2 + 160).setDepth(1000);
+
+            const bg = this.add.rectangle(0, 0, 520, 680, 0x000000, 0.88).setOrigin(0.5);
+
+            const title = this.add.text(0, -295, 'SELECT BET', {
+              fontFamily: 'Arial',
+              fontSize: '44px',
+              fontStyle: 'bold',
+              color: '#ffffff'
+            }).setOrigin(0.5);
+
+            this.betPanel.add([bg, title]);
+
+            this.betOptions.forEach((value, index) => {
+              const y = -220 + index * 58;
+
+              const option = this.add.text(0, y, `${value}$`, {
+                fontFamily: 'Arial',
+                fontSize: '40px',
+                fontStyle: 'bold',
+                color: value === this.bet ? '#00ff88' : '#ffffff',
+                backgroundColor: '#111111',
+                padding: { left: 34, right: 34, top: 10, bottom: 10 }
+              })
+                .setOrigin(0.5)
+                .setInteractive({ useHandCursor: true });
+
+              option.on('pointerdown', () => {
+                this.bet = value;
+                this.updateBetText();
+
+                if (this.betPanel) {
+                  this.betPanel.destroy();
+                  this.betPanel = null;
+                }
+              });
+
+              this.betPanel.add(option);
+            });
+          }
+
+          createEnemies() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.enemyBasePositions = {
+              enemy1: { x: width / 2 - 246, y: height / 2 - 598 },
+              enemy2: { x: width / 2 + 74, y: height / 2 - 531 },
+              enemy3: { x: width / 2 + 330, y: height / 2 - 539 }
+            };
+
+            this.enemies.enemy1 = this.add.image(this.enemyBasePositions.enemy1.x, this.enemyBasePositions.enemy1.y, 'enemy1_active').setOrigin(0.5);
+            this.enemies.enemy2 = this.add.image(this.enemyBasePositions.enemy2.x, this.enemyBasePositions.enemy2.y, 'enemy2_inactive').setOrigin(0.5);
+            this.enemies.enemy3 = this.add.image(this.enemyBasePositions.enemy3.x, this.enemyBasePositions.enemy3.y, 'enemy3_inactive').setOrigin(0.5);
+
+            this.enemyCrosses.enemy1 = this.add.image(this.enemyBasePositions.enemy1.x, this.enemyBasePositions.enemy1.y, 'enemy_cross')
+              .setOrigin(0.5)
+              .setDepth(30)
+              .setVisible(false);
+
+            this.enemyCrosses.enemy2 = this.add.image(this.enemyBasePositions.enemy2.x, this.enemyBasePositions.enemy2.y, 'enemy_cross')
+              .setOrigin(0.5)
+              .setDepth(30)
+              .setVisible(false);
+
+            this.enemyCrosses.enemy3 = this.add.image(this.enemyBasePositions.enemy3.x, this.enemyBasePositions.enemy3.y, 'enemy_cross')
+              .setOrigin(0.5)
+              .setDepth(30)
+              .setVisible(false);
+          }
+
+          updateEnemiesForRound() {
+            if (!this.enemies.enemy1 || !this.enemies.enemy2 || !this.enemies.enemy3) return;
+
+            if (this.currentRound === 1) {
+              this.enemies.enemy1.setTexture('enemy1_active');
+              this.enemies.enemy1.setPosition(this.enemyBasePositions.enemy1.x, this.enemyBasePositions.enemy1.y);
+
+              this.enemies.enemy2.setTexture('enemy2_inactive');
+              this.enemies.enemy2.setPosition(this.enemyBasePositions.enemy2.x, this.enemyBasePositions.enemy2.y);
+
+              this.enemies.enemy3.setTexture('enemy3_inactive');
+              this.enemies.enemy3.setPosition(this.enemyBasePositions.enemy3.x, this.enemyBasePositions.enemy3.y);
+
+              this.enemyCrosses.enemy1.setVisible(false);
+              this.enemyCrosses.enemy2.setVisible(false);
+              this.enemyCrosses.enemy3.setVisible(false);
+            }
+
+            if (this.currentRound === 2) {
+              const enemy1InactiveX = this.enemyBasePositions.enemy1.x + this.enemy1InactiveOffsetX;
+              const enemy1InactiveY = this.enemyBasePositions.enemy1.y + this.enemy1InactiveOffsetY;
+
+              this.enemies.enemy1.setTexture('enemy1_inactive');
+              this.enemies.enemy1.setPosition(enemy1InactiveX, enemy1InactiveY);
+
+              this.enemyCrosses.enemy1.setPosition(enemy1InactiveX, enemy1InactiveY);
+              this.enemyCrosses.enemy1.setVisible(true);
+
+              this.enemies.enemy2.setTexture('enemy2_active');
+              this.enemies.enemy2.setPosition(
+                this.enemyBasePositions.enemy2.x + this.enemy2ActiveOffsetX,
+                this.enemyBasePositions.enemy2.y + this.enemy2ActiveOffsetY
+              );
+
+              this.enemies.enemy3.setTexture('enemy3_inactive');
+              this.enemies.enemy3.setPosition(this.enemyBasePositions.enemy3.x, this.enemyBasePositions.enemy3.y);
+
+              this.enemyCrosses.enemy2.setVisible(false);
+              this.enemyCrosses.enemy3.setVisible(false);
+            }
+
+            if (this.currentRound >= 3) {
+              const enemy1InactiveX = this.enemyBasePositions.enemy1.x + this.enemy1InactiveOffsetX;
+              const enemy1InactiveY = this.enemyBasePositions.enemy1.y + this.enemy1InactiveOffsetY;
+
+              const enemy2InactiveX = this.enemyBasePositions.enemy2.x + this.enemy2InactiveOffsetX;
+              const enemy2InactiveY = this.enemyBasePositions.enemy2.y + this.enemy2InactiveOffsetY;
+
+              const enemy3ActiveX = this.enemyBasePositions.enemy3.x + this.enemy3ActiveOffsetX;
+              const enemy3ActiveY = this.enemyBasePositions.enemy3.y + this.enemy3ActiveOffsetY;
+
+              this.enemies.enemy1.setTexture('enemy1_inactive');
+              this.enemies.enemy1.setPosition(enemy1InactiveX, enemy1InactiveY);
+
+              this.enemyCrosses.enemy1.setPosition(enemy1InactiveX, enemy1InactiveY);
+              this.enemyCrosses.enemy1.setVisible(true);
+
+              this.enemies.enemy2.setTexture('enemy2_inactive');
+              this.enemies.enemy2.setPosition(enemy2InactiveX, enemy2InactiveY);
+
+              this.enemyCrosses.enemy2.setPosition(enemy2InactiveX, enemy2InactiveY);
+              this.enemyCrosses.enemy2.setVisible(true);
+
+              this.enemies.enemy3.setTexture('enemy3_active');
+              this.enemies.enemy3.setPosition(enemy3ActiveX, enemy3ActiveY);
+
+              this.enemyCrosses.enemy3.setPosition(enemy3ActiveX, enemy3ActiveY);
+              this.enemyCrosses.enemy3.setVisible(false);
+            }
+          }
+
+          showFinalWinEnemies() {
+            const enemy1InactiveX = this.enemyBasePositions.enemy1.x + this.enemy1InactiveOffsetX;
+            const enemy1InactiveY = this.enemyBasePositions.enemy1.y + this.enemy1InactiveOffsetY;
+
+            const enemy2InactiveX = this.enemyBasePositions.enemy2.x + this.enemy2InactiveOffsetX;
+            const enemy2InactiveY = this.enemyBasePositions.enemy2.y + this.enemy2InactiveOffsetY;
+
+            const enemy3InactiveX = this.enemyBasePositions.enemy3.x;
+            const enemy3InactiveY = this.enemyBasePositions.enemy3.y;
+
+            this.enemies.enemy1.setTexture('enemy1_inactive');
+            this.enemies.enemy1.setPosition(enemy1InactiveX, enemy1InactiveY);
+            this.enemies.enemy1.setVisible(true);
+
+            this.enemies.enemy2.setTexture('enemy2_inactive');
+            this.enemies.enemy2.setPosition(enemy2InactiveX, enemy2InactiveY);
+            this.enemies.enemy2.setVisible(true);
+
+            this.enemies.enemy3.setTexture('enemy3_inactive');
+            this.enemies.enemy3.setPosition(enemy3InactiveX, enemy3InactiveY);
+            this.enemies.enemy3.setVisible(true);
+
+            this.enemyCrosses.enemy1.setPosition(enemy1InactiveX, enemy1InactiveY).setVisible(true);
+            this.enemyCrosses.enemy2.setPosition(enemy2InactiveX, enemy2InactiveY).setVisible(true);
+            this.enemyCrosses.enemy3.setPosition(enemy3InactiveX, enemy3InactiveY).setVisible(true);
+          }
+
+          createRoundText() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.roundText = this.add.text(
+              width / 2 + this.roundTextOffsetX,
+              height / 2 + this.roundTextOffsetY,
+              `ROUND ${this.currentRound}`,
+              {
+                fontFamily: 'Arial',
+                fontSize: '110px',
+                color: '#ffffff',
+                fontStyle: '900'
+              }
+            )
+              .setOrigin(0.5)
+              .setDepth(20);
+          }
+
+          createWinAmountText() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.winAmountText = this.add.text(
+              width / 2,
+              height / 2 + this.roundTextOffsetY + 105,
+              '',
+              {
+                fontFamily: 'Arial',
+                fontSize: '58px',
+                color: '#ffffff',
+                fontStyle: '900',
+                align: 'center'
+              }
+            )
+              .setOrigin(0.5)
+              .setDepth(21)
+              .setVisible(false);
+          }
+
+          showWinAmount(amount, prefix = '+') {
+            if (this.winAmountText) {
+              this.winAmountText.setText(`${prefix}${amount}$`);
+              this.winAmountText.setVisible(true);
+            }
+          }
+
+          showDrawAmount(amount, percent) {
+            if (this.winAmountText) {
+              this.winAmountText.setText(`+${amount}$\n${percent}%`);
+              this.winAmountText.setVisible(true);
+            }
+          }
+
+          hideWinAmount() {
+            if (this.winAmountText) {
+              this.winAmountText.setVisible(false);
+            }
+          }
+
+          createChooseText() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.chooseText = this.add.text(width / 2, height / 2 + this.chooseTextOffsetY, 'Choose', {
+              fontFamily: 'Arial',
+              fontSize: '86px',
+              fontStyle: 'bold',
+              color: '#ffffff'
+            })
+              .setOrigin(0.5)
+              .setDepth(50)
+              .setVisible(false);
+          }
+
+          createButtonsHorizontal() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            const spacing = -5;
+
+            this.buttonsGroup = this.add.container(width / 2, height / 2 + 621);
+
+            const rock = this.createChoiceButton('rock', 0, 0);
+            const scissors = this.createChoiceButton('scissors', 0, 0);
+            const paper = this.createChoiceButton('paper', 0, 0);
+
+            const totalWidth = rock.width + scissors.width + paper.width + spacing * 2;
+            const startX = -totalWidth / 2;
+
+            rock.setPosition(startX + rock.width / 2, 0);
+
+            scissors.setPosition(
+              rock.x + rock.width / 2 + spacing + scissors.width / 2,
+              0
+            );
+
+            paper.setPosition(
+              scissors.x + scissors.width / 2 + spacing + paper.width / 2,
+              0
+            );
+
+            this.buttonsGroup.add([rock, scissors, paper]);
+          }
+
+          createChoiceButton(type, x, y) {
+            const idleKey = `${type}_idle`;
+            const activeKey = `${type}_active`;
+
+            const btn = this.add.image(x, y, idleKey)
+              .setOrigin(0.5)
+              .setInteractive({ useHandCursor: true });
+
+            btn.choiceType = type;
+            btn.idleKey = idleKey;
+            btn.activeKey = activeKey;
+
+            btn.on('pointerdown', () => {
+              if (!this.roundStarted || this.selected) return;
+              this.selectButton(type);
+              this.resolveRound(type);
+            });
+
+            this.buttons[type] = btn;
+
+            return btn;
+          }
+
+          createStopButton() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.stopButton = this.add.text(width / 2, height - 235, 'TAKE 0$', {
+              fontFamily: 'Arial',
+              fontSize: '54px',
+              fontStyle: 'bold',
+              color: '#ffffff',
+              backgroundColor: '#000000',
+              align: 'center',
+              padding: { left: 30, right: 30, top: 14, bottom: 14 }
+            })
+              .setOrigin(0.5)
+              .setInteractive({ useHandCursor: true })
+              .setVisible(false);
+
+            this.stopAmountText = this.add.text(width / 2, height - 105, '', {
+              fontFamily: 'Arial',
+              fontSize: '34px',
+              fontStyle: 'bold',
+              color: '#ffffff'
+            })
+              .setOrigin(0.5)
+              .setDepth(20)
+              .setVisible(false);
+
+            this.stopButton.on('pointerdown', () => {
+              if (!this.canStop) return;
+              this.takeWinAndRestart();
+            });
+          }
+
+          createSplitButton() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.splitButton = this.add.text(width / 2, height - 160, 'SPLIT 50%', {
+              fontFamily: 'Arial',
+              fontSize: '38px',
+              fontStyle: 'bold',
+              color: '#ffffff',
+              backgroundColor: '#000000',
+              align: 'center',
+              padding: { left: 24, right: 24, top: 12, bottom: 12 }
+            })
+              .setOrigin(0.5)
+              .setInteractive({ useHandCursor: true })
+              .setVisible(false);
+
+            this.splitButton.on('pointerdown', () => {
+              this.splitBank();
+            });
+          }
+
+          getTotalTakeAmount() {
+            return this.currentWinAmount + this.safeWinAmount;
+          }
+
+          splitBank() {
+            if (!this.canStop || this.splitUsedThisDecision || this.splitUsedThisGame || this.currentWinAmount < 2) return;
+
+            const savedAmount = Math.floor(this.currentWinAmount * 0.5);
+            this.currentWinAmount -= savedAmount;
+            this.safeWinAmount += savedAmount;
+            this.splitUsedThisDecision = true;
+            this.splitUsedThisGame = true;
+            this.canStop = false;
+
+            this.updateStopButtonText();
+            this.flashSplitButton(savedAmount);
+            this.stopButton.setVisible(false);
+          }
+
+          flashSplitButton(amount) {
+            if (!this.splitButton) return;
+
+            const originalY = this.splitButton.y;
+            this.splitButton.setColor('#00ff88');
+            this.splitButton.setText(`SAFE +${amount}$`);
+
+            this.tweens.add({
+              targets: this.splitButton,
+              y: originalY - 12,
+              duration: 95,
+              yoyo: true,
+              ease: 'Sine.easeOut',
+              onComplete: () => {
+                this.splitButton.y = originalY;
+                this.updateStopButtonText();
+              }
+            });
+          }
+
+          setSplitButtonVisible(visible) {
+            if (!this.splitButton) return;
+
+            this.splitButton.setVisible(visible);
+            this.updateSplitButtonState();
+          }
+
+          updateSplitButtonState() {
+            if (!this.splitButton) return;
+
+            const canSplit = this.canStop && !this.splitUsedThisDecision && !this.splitUsedThisGame && this.currentWinAmount >= 2;
+            const splitAmount = Math.floor(this.currentWinAmount * 0.5);
+            this.splitButton.setText(canSplit ? `SPLIT 50%  +${splitAmount}$ SAFE` : 'SPLIT USED');
+            this.splitButton.setColor(canSplit ? '#ffffff' : '#888888');
+            this.splitButton.setAlpha(canSplit ? 1 : 0.45);
+          }
+
+          updateStopButtonText() {
+            if (this.stopButton) {
+              this.stopButton.setText(`TAKE ${this.getTotalTakeAmount()}$`);
+            }
+
+            if (this.stopAmountText) {
+              this.stopAmountText.setText(`SAFE ${this.safeWinAmount}$   RISK ${this.currentWinAmount}$`);
+              this.stopAmountText.setVisible(this.canStop || this.safeWinAmount > 0);
+            }
+
+            this.updateSplitButtonState();
+          }
+
+          createStartButton() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.startButton = this.add.text(width / 2, height - 285, 'START', {
+              fontFamily: 'Arial',
+              fontSize: '54px',
+              fontStyle: 'bold',
+              color: '#ffffff',
+              backgroundColor: '#000000',
+              padding: { left: 30, right: 30, top: 14, bottom: 14 }
+            })
+              .setOrigin(0.5)
+              .setInteractive({ useHandCursor: true });
+
+            this.startButton.on('pointerdown', () => {
+              if (this.gameOver) {
+                this.restartGame();
+              } else {
+                this.startRound();
+              }
+            });
+          }
+
+          createCostText() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.costText = this.add.text(width / 2, height - 220, `COST: ${this.getGameCost()}$`, {
+              fontFamily: 'Arial',
+              fontSize: '34px',
+              fontStyle: 'bold',
+              color: '#ffffff'
+            })
+              .setOrigin(0.5)
+              .setDepth(20);
+          }
+
+          updateCostText() {
+            if (this.costText) {
+              this.costText.setText(`COST: ${this.getGameCost()}$`);
+            }
+          }
+
+          showNoMoneyFeedback() {
+            if (this.startButton) {
+              const baseY = this.startButton.y;
+
+              this.tweens.killTweensOf(this.startButton);
+
+              this.startButton.setColor('#ff2b2b');
+
+              this.tweens.add({
+                targets: this.startButton,
+                y: baseY - 12,
+                duration: 55,
+                yoyo: true,
+                repeat: 5,
+                ease: 'Sine.easeInOut',
+                onComplete: () => {
+                  this.startButton.y = baseY;
+                  this.startButton.setColor('#ffffff');
+                }
+              });
+
+              this.tweens.add({
+                targets: this.startButton,
+                alpha: 0.25,
+                duration: 80,
+                yoyo: true,
+                repeat: 5,
+                onComplete: () => {
+                  this.startButton.alpha = 1;
+                }
+              });
+            }
+
+            if (this.balanceText) {
+              this.tweens.killTweensOf(this.balanceText);
+
+              this.balanceText.setColor('#ff2b2b');
+
+              this.tweens.add({
+                targets: this.balanceText,
+                alpha: 0.25,
+                duration: 90,
+                yoyo: true,
+                repeat: 5,
+                onComplete: () => {
+                  this.balanceText.alpha = 1;
+                  this.balanceText.setColor('#ffffff');
+                }
+              });
+            }
+          }
+
+          startRound() {
+            if (this.betPanel) {
+              this.betPanel.destroy();
+              this.betPanel = null;
+            }
+
+            if (!this.stakePaid) {
+              const cost = this.getGameCost();
+
+              if (this.balance < cost) {
+                this.showNoMoneyFeedback();
+                return;
+              }
+
+              this.balance -= cost;
+              this.stakePaid = true;
+              this.updateBalanceText();
+            }
+
+            this.beginChoicePhase();
+          }
+
+          beginChoicePhase() {
+            this.roundStarted = true;
+            this.selected = null;
+            this.canStop = false;
+            this.splitUsedThisDecision = false;
+
+            this.hideWinAmount();
+
+            this.setEnemiesVisible(false);
+            if (this.roundText) this.roundText.setVisible(false);
+
+            this.startButton.setVisible(false);
+            if (this.costText) this.costText.setVisible(false);
+
+            this.stopButton.setVisible(false);
+            if (this.stopAmountText) this.stopAmountText.setVisible(false);
+            this.setSplitButtonVisible(false);
+
+            this.chooseText.setVisible(true);
+
+            this.clearPickIcons();
+            this.resetChoiceButtons();
+            this.setChoiceButtonsEnabled(true);
+          }
+
+          prepareContinueChoiceScreen(showTake = true) {
+            this.roundStarted = true;
+            this.selected = null;
+            this.canStop = showTake;
+            this.splitUsedThisDecision = false;
+
+            this.clearConfetti();
+            this.clearPickIcons();
+            this.resetChoiceButtons();
+            this.setChoiceButtonsEnabled(true);
+
+            this.updateEnemiesForRound();
+            this.setEnemiesVisible(true);
+
+            if (this.roundText) {
+              this.roundText.setText(`ROUND ${this.currentRound}`);
+              this.roundText.setVisible(true);
+            }
+
+            this.hideWinAmount();
+
+            this.chooseText.setVisible(false);
+
+            this.startButton.setVisible(false);
+            if (this.costText) this.costText.setVisible(false);
+
+            this.stopButton.setVisible(showTake);
+            this.setSplitButtonVisible(showTake);
+            this.updateStopButtonText();
+          }
+
+          selectButton(type) {
+            this.selected = type;
+
+            Object.keys(this.buttons).forEach((key) => {
+              const btn = this.buttons[key];
+              btn.setTexture(key === type ? btn.activeKey : btn.idleKey);
+              btn.setAlpha(1);
+            });
+
+            this.setChoiceButtonsLockedAfterPick();
+          }
+
+          getRoundResultWeights() {
+            if (this.currentRound === 1) {
+              return { win: 38, draw: 40, lose: 22 };
+            }
+
+            if (this.currentRound === 2) {
+              return { win: 18, draw: 42, lose: 40 };
+            }
+
+            return { win: 8, draw: 34, lose: 58 };
+          }
+
+          getWeightedResult() {
+            const weights = this.getRoundResultWeights();
+            const results = ['win', 'draw', 'lose'];
+
+            const total = results.reduce((sum, result) => sum + weights[result], 0);
+            let roll = Phaser.Math.Between(1, total);
+
+            for (const result of results) {
+              roll -= weights[result];
+              if (roll <= 0) return result;
+            }
+
+            return results[results.length - 1];
+          }
+
+          getEnemyChoiceForResult(playerChoice, result) {
+            if (result === 'draw') return playerChoice;
+
+            if (result === 'win') {
+              if (playerChoice === 'rock') return 'scissors';
+              if (playerChoice === 'scissors') return 'paper';
+              return 'rock';
+            }
+
+            if (playerChoice === 'rock') return 'paper';
+            if (playerChoice === 'scissors') return 'rock';
+            return 'scissors';
+          }
+
+          resolveRound(playerChoice) {
+            const result = this.getWeightedResult();
+            const enemyChoice = this.getEnemyChoiceForResult(playerChoice, result);
+
+            this.showPickIcons(playerChoice, enemyChoice);
+
+            if (result === 'win') {
+              this.lastRoundWinAmount = this.getRoundWinAmount(this.currentRound);
+              this.currentWinAmount += this.lastRoundWinAmount;
+            }
+
+            if (result === 'draw') {
+              this.lastDrawPercent = 50;
+              this.lastDrawAmount = Math.floor(this.getRoundWinAmount(this.currentRound) * 0.5);
+              this.currentWinAmount += this.lastDrawAmount;
+            }
+
+            if (result === 'win' && this.currentRound === this.maxRound) {
+              this.spawnConfetti();
+            }
+
+            this.time.delayedCall(900, () => {
+              if (result === 'draw') {
+                this.showDrawScreen();
+              } else if (result === 'win') {
+                this.showWinScreen();
+              } else {
+                this.showRetryOnChoiceScreen();
+              }
+            });
+          }
+
+          showWinScreen() {
+            this.roundStarted = false;
+            this.selected = null;
+
+            this.clearPickIcons();
+            this.chooseText.setVisible(false);
+            this.startButton.setVisible(false);
+            if (this.costText) this.costText.setVisible(false);
+            this.stopButton.setVisible(false);
+            if (this.stopAmountText) this.stopAmountText.setVisible(false);
+            this.setSplitButtonVisible(false);
+            this.setEnemiesVisible(false);
+            this.setChoiceButtonsLockedAfterPick();
+
+            if (this.roundText) {
+              this.roundText.setText('YOU WIN');
+              this.roundText.setVisible(true);
+            }
+
+            this.showWinAmount(this.lastRoundWinAmount);
+
+            this.time.delayedCall(800, () => {
+              if (this.currentRound < this.maxRound) {
+                this.currentRound++;
+                this.prepareContinueChoiceScreen(true);
+              } else {
+                this.showFinalWinScreen();
+              }
+            });
+          }
+
+          showFinalWinScreen() {
+            this.gameOver = true;
+            this.roundStarted = false;
+            this.selected = null;
+            this.canStop = false;
+
+            this.clearPickIcons();
+            this.chooseText.setVisible(false);
+            this.stopButton.setVisible(false);
+            if (this.stopAmountText) this.stopAmountText.setVisible(false);
+            this.setSplitButtonVisible(false);
+
+            this.showFinalWinEnemies();
+
+            if (this.roundText) {
+              this.roundText.setText('YOU WIN');
+              this.roundText.setVisible(true);
+            }
+
+            this.showWinAmount(this.getTotalTakeAmount());
+
+            this.balance += this.getTotalTakeAmount();
+            this.updateBalanceText();
+
+            this.startButton.setText('PLAY AGAIN');
+            this.startButton.setVisible(true);
+
+            if (this.costText) this.costText.setVisible(false);
+
+            this.setChoiceButtonsInitialInactive();
+            this.stakePaid = false;
+            this.safeWinAmount = 0;
+            this.currentWinAmount = 0;
+            this.splitUsedThisDecision = false;
+            this.splitUsedThisGame = false;
+          }
+
+          takeWinAndRestart() {
+            this.balance += this.getTotalTakeAmount();
+            this.updateBalanceText();
+
+            this.currentRound = 1;
+            this.currentWinAmount = 0;
+            this.safeWinAmount = 0;
+            this.gameOver = false;
+            this.canStop = false;
+            this.stakePaid = false;
+            this.splitUsedThisDecision = false;
+            this.splitUsedThisGame = false;
+
+            this.restartGame();
+          }
+
+          spawnConfetti() {
+            this.clearConfetti();
+
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.confettiGroup = this.add.group();
+
+            const colors = [0xff4040, 0xffd640, 0x40ff7a, 0x40b6ff, 0xd640ff, 0xffffff];
+
+            for (let i = 0; i < 55; i++) {
+              const x = Phaser.Math.Between(120, width - 120);
+              const y = Phaser.Math.Between(220, height / 2 + 120);
+
+              const piece = this.add.rectangle(
+                x,
+                y,
+                Phaser.Math.Between(8, 18),
+                Phaser.Math.Between(8, 20),
+                Phaser.Utils.Array.GetRandom(colors)
+              )
+                .setDepth(200)
+                .setAngle(Phaser.Math.Between(0, 180));
+
+              this.confettiGroup.add(piece);
+
+              this.tweens.add({
+                targets: piece,
+                y: y + Phaser.Math.Between(160, 420),
+                x: x + Phaser.Math.Between(-120, 120),
+                angle: Phaser.Math.Between(180, 720),
+                alpha: 0,
+                duration: Phaser.Math.Between(1100, 1900),
+                ease: 'Cubic.easeOut'
+              });
+            }
+          }
+
+          clearConfetti() {
+            if (this.confettiGroup) {
+              this.confettiGroup.clear(true, true);
+              this.confettiGroup = null;
+            }
+          }
+
+          showDrawScreen() {
+            this.roundStarted = false;
+            this.selected = null;
+            this.canStop = false;
+
+            this.clearPickIcons();
+            this.chooseText.setVisible(false);
+            this.startButton.setVisible(false);
+            if (this.costText) this.costText.setVisible(false);
+            this.stopButton.setVisible(false);
+            if (this.stopAmountText) this.stopAmountText.setVisible(false);
+            this.setSplitButtonVisible(false);
+            this.setEnemiesVisible(false);
+            this.setChoiceButtonsLockedAfterPick();
+
+            if (this.roundText) {
+              this.roundText.setText('DRAW');
+              this.roundText.setVisible(true);
+            }
+
+            this.showDrawAmount(this.lastDrawAmount, this.lastDrawPercent);
+
+            this.time.delayedCall(800, () => {
+              this.prepareContinueChoiceScreen(true);
+            });
+          }
+
+          showRetryOnChoiceScreen() {
+            const safePayout = this.safeWinAmount;
+
+            this.gameOver = true;
+            this.roundStarted = false;
+            this.canStop = false;
+            this.currentWinAmount = 0;
+            this.safeWinAmount = 0;
+            this.stakePaid = false;
+            this.splitUsedThisDecision = false;
+            this.splitUsedThisGame = false;
+
+            if (safePayout > 0) {
+              this.balance += safePayout;
+              this.updateBalanceText();
+            }
+
+            this.startButton.setText('RETRY');
+            this.startButton.setVisible(true);
+
+            if (this.costText) {
+              this.costText.setVisible(false);
+            }
+
+            this.stopButton.setVisible(false);
+            if (this.stopAmountText) this.stopAmountText.setVisible(false);
+            this.setSplitButtonVisible(false);
+
+            this.chooseText.setVisible(false);
+
+            if (this.roundText) {
+              this.roundText.setText('YOU LOSE');
+              this.roundText.setVisible(true);
+            }
+
+            if (safePayout > 0) {
+              this.showWinAmount(safePayout, 'SAFE +');
+            } else {
+              this.hideWinAmount();
+            }
+
+            this.setEnemiesVisible(false);
+
+            this.setChoiceButtonsLoseInactive();
+          }
+
+          showPickIcons(playerChoice, enemyChoice) {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.clearPickIcons();
+
+            this.playerPickIcon = this.add.image(width / 2 - 230, height / 2 + 250, `${playerChoice}_active`)
+              .setOrigin(0.5)
+              .setScale(0.85)
+              .setDepth(60);
+
+            this.enemyPickIcon = this.add.image(width / 2 + 230, height / 2 + 250, `${enemyChoice}_active`)
+              .setOrigin(0.5)
+              .setScale(0.85)
+              .setDepth(60);
+          }
+
+          clearPickIcons() {
+            this.playerPickIcon?.destroy();
+            this.enemyPickIcon?.destroy();
+
+            this.playerPickIcon = null;
+            this.enemyPickIcon = null;
+          }
+
+          resetToRoundScreen(buttonText, showStop = false) {
+            this.roundStarted = false;
+            this.selected = null;
+            this.canStop = showStop;
+
+            this.clearConfetti();
+            this.clearPickIcons();
+            this.resetChoiceButtons();
+            this.setChoiceButtonsInitialInactive();
+
+            this.updateEnemiesForRound();
+            this.setEnemiesVisible(true);
+
+            if (this.roundText) {
+              if (!this.gameOver) this.roundText.setText(`ROUND ${this.currentRound}`);
+              this.roundText.setVisible(true);
+            }
+
+            this.hideWinAmount();
+
+            this.chooseText.setVisible(false);
+
+            this.startButton.setText(buttonText);
+            this.startButton.setVisible(true);
+
+            if (this.costText) {
+              this.updateCostText();
+              this.costText.setVisible(true);
+            }
+
+            this.stopButton.setVisible(showStop);
+            this.setSplitButtonVisible(showStop);
+
+            this.updateStopButtonText();
+          }
+
+          restartGame() {
+            this.currentRound = 1;
+            this.currentWinAmount = 0;
+            this.safeWinAmount = 0;
+            this.gameOver = false;
+            this.canStop = false;
+            this.stakePaid = false;
+            this.splitUsedThisDecision = false;
+            this.splitUsedThisGame = false;
+
+            if (this.betPanel) {
+              this.betPanel.destroy();
+              this.betPanel = null;
+            }
+
+            this.clearConfetti();
+
+            if (this.roundText) {
+              this.roundText.setText('ROUND 1');
+            }
+
+            this.hideWinAmount();
+
+            this.resetToRoundScreen('START', false);
+          }
+
+          resetChoiceButtons() {
+            Object.keys(this.buttons).forEach((key) => {
+              const btn = this.buttons[key];
+              btn.setTexture(btn.idleKey);
+              btn.setAlpha(1);
+            });
+          }
+
+          setChoiceButtonsEnabled(enabled) {
+            Object.keys(this.buttons).forEach((key) => {
+              const btn = this.buttons[key];
+
+              if (enabled) {
+                btn.setInteractive({ useHandCursor: true });
+                btn.setTexture(btn.idleKey);
+                btn.setAlpha(1);
+              } else {
+                btn.disableInteractive();
+                btn.setTexture(btn.activeKey);
+                btn.setAlpha(1);
+              }
+            });
+          }
+
+          setChoiceButtonsInitialInactive() {
+            Object.keys(this.buttons).forEach((key) => {
+              const btn = this.buttons[key];
+              btn.disableInteractive();
+              btn.setTexture(btn.activeKey);
+              btn.setAlpha(0.45);
+            });
+          }
+
+          setChoiceButtonsLockedAfterPick() {
+            Object.keys(this.buttons).forEach((key) => {
+              const btn = this.buttons[key];
+              btn.disableInteractive();
+              btn.setAlpha(1);
+            });
+          }
+
+          setChoiceButtonsLoseInactive() {
+            Object.keys(this.buttons).forEach((key) => {
+              const btn = this.buttons[key];
+              btn.disableInteractive();
+              btn.setAlpha(0.45);
+            });
+          }
+
+          setEnemiesVisible(visible) {
+            Object.values(this.enemies).forEach((enemy) => {
+              enemy.setVisible(visible);
+            });
+
+            Object.values(this.enemyCrosses).forEach((cross) => {
+              cross.setVisible(
+                visible &&
+                (
+                  (cross === this.enemyCrosses.enemy1 && this.currentRound >= 2) ||
+                  (cross === this.enemyCrosses.enemy2 && this.currentRound >= 3) ||
+                  (cross === this.enemyCrosses.enemy3 && this.gameOver)
+                )
+              );
+            });
+          }
+        }
+
+        const config = {
+          type: Phaser.AUTO,
+          parent: 'game-wrap',
+          width: 1080,
+          height: 2338,
+          backgroundColor: '#000000',
+
+          scale: {
+            mode: Phaser.Scale.FIT,
+            autoCenter: Phaser.Scale.CENTER_BOTH
+          },
+
+          scene: Example
+        };
+
+        window.__game = new Phaser.Game(config);
+      })();
+    }
+  </script>
+</body>
+</html>
