@@ -242,7 +242,7 @@
           }
 
           createVersionText() {
-            this.versionText = this.add.text(40, 38, 'GAME VERSION 0.8', {
+            this.versionText = this.add.text(40, 38, 'GAME VERSION 0.9', {
               fontFamily: 'Arial',
               fontSize: '32px',
               fontStyle: 'bold',
@@ -1402,11 +1402,11 @@
 
             this.playerPickResult = this.add.image(playerX, resultY, playerResultKey)
               .setOrigin(0.5)
-              .setScale(0.61)
+              .setScale(0.67)
               .setDepth(58);
             this.enemyPickResult = this.add.image(enemyX, resultY, enemyResultKey)
               .setOrigin(0.5)
-              .setScale(0.61)
+              .setScale(0.67)
               .setDepth(58);
 
             this.playerPickIcon = this.add.image(playerX, pickY, `${playerChoice}_active`)
