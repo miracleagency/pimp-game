@@ -107,6 +107,8 @@
 
             this.playerPickIcon = null;
             this.enemyPickIcon = null;
+            this.playerPickGlow = null;
+            this.enemyPickGlow = null;
 
             this.confettiGroup = null;
 
@@ -236,7 +238,7 @@
           }
 
           createVersionText() {
-            this.versionText = this.add.text(40, 38, 'GAME VERSION 0.4', {
+            this.versionText = this.add.text(40, 38, 'GAME VERSION 0.5', {
               fontFamily: 'Arial',
               fontSize: '32px',
               fontStyle: 'bold',
@@ -1121,7 +1123,7 @@
             const result = this.getWeightedResult();
             const enemyChoice = this.getEnemyChoiceForResult(playerChoice, result);
 
-            this.showPickIcons(playerChoice, enemyChoice);
+            this.showPickIcons(playerChoice, enemyChoice, result);
             this.hideRoundReward();
 
             if (result === 'win') {
@@ -1158,7 +1160,6 @@
             this.roundStarted = false;
             this.selected = null;
 
-            this.clearPickIcons();
             this.chooseText.setVisible(false);
             this.startButton.setVisible(false);
             this.nextButton.setVisible(false);
@@ -1193,7 +1194,6 @@
             this.selected = null;
             this.canStop = false;
 
-            this.clearPickIcons();
             this.chooseText.setVisible(false);
             this.stopButton.setVisible(false);
             this.nextButton.setVisible(false);
@@ -1299,7 +1299,6 @@
             this.selected = null;
             this.canStop = false;
 
-            this.clearPickIcons();
             this.chooseText.setVisible(false);
             this.startButton.setVisible(false);
             this.nextButton.setVisible(false);
@@ -1308,7 +1307,8 @@
             if (this.stopAmountText) this.stopAmountText.setVisible(false);
             this.setSplitButtonVisible(false);
             this.hideRoundReward();
-            this.setEnemiesVisible(false);
+            this.updateEnemiesForRound();
+            this.setEnemiesVisible(true);
             this.setChoiceButtonsLockedAfterPick();
 
             if (this.roundText) {
@@ -1380,27 +1380,43 @@
             this.setChoiceButtonsLoseInactive();
           }
 
-          showPickIcons(playerChoice, enemyChoice) {
+          showPickIcons(playerChoice, enemyChoice, result) {
             const width = this.scale.width;
             const height = this.scale.height;
+            const playerX = width / 2 - 230;
+            const enemyX = width / 2 + 230;
+            const pickY = height / 2 + 145;
+            const glowY = pickY + 58;
 
             this.clearPickIcons();
 
-            this.playerPickIcon = this.add.image(width / 2 - 230, height / 2 + 250, `${playerChoice}_active`)
+            const playerGlowColor = result === 'win' ? 0x00ff88 : result === 'lose' ? 0xff2b2b : 0xffd640;
+            const enemyGlowColor = result === 'win' ? 0xff2b2b : result === 'lose' ? 0x00ff88 : 0xffd640;
+
+            this.playerPickGlow = this.add.ellipse(playerX, glowY, 210, 72, playerGlowColor, 0.42)
+              .setDepth(58);
+            this.enemyPickGlow = this.add.ellipse(enemyX, glowY, 210, 72, enemyGlowColor, 0.42)
+              .setDepth(58);
+
+            this.playerPickIcon = this.add.image(playerX, pickY, `${playerChoice}_active`)
               .setOrigin(0.5)
               .setScale(0.85)
               .setDepth(60);
 
-            this.enemyPickIcon = this.add.image(width / 2 + 230, height / 2 + 250, `${enemyChoice}_active`)
+            this.enemyPickIcon = this.add.image(enemyX, pickY, `${enemyChoice}_active`)
               .setOrigin(0.5)
               .setScale(0.85)
               .setDepth(60);
           }
 
           clearPickIcons() {
+            this.playerPickGlow?.destroy();
+            this.enemyPickGlow?.destroy();
             this.playerPickIcon?.destroy();
             this.enemyPickIcon?.destroy();
 
+            this.playerPickGlow = null;
+            this.enemyPickGlow = null;
             this.playerPickIcon = null;
             this.enemyPickIcon = null;
           }
