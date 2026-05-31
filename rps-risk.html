@@ -236,7 +236,7 @@
           }
 
           createVersionText() {
-            this.versionText = this.add.text(40, 38, 'GAME VERSION 0.2', {
+            this.versionText = this.add.text(40, 38, 'GAME VERSION 0.3', {
               fontFamily: 'Arial',
               fontSize: '32px',
               fontStyle: 'bold',
@@ -956,8 +956,12 @@
             this.hideWinAmount();
             this.showRoundReward();
 
-            this.setEnemiesVisible(false);
-            if (this.roundText) this.roundText.setVisible(false);
+            this.updateEnemiesForRound();
+            this.setEnemiesVisible(true);
+            if (this.roundText) {
+              this.roundText.setText(`ROUND ${this.currentRound}`);
+              this.roundText.setVisible(true);
+            }
 
             this.startButton.setVisible(false);
             this.nextButton.setVisible(false);
