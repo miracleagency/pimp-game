@@ -112,6 +112,7 @@
 
             this.currentRound = 1;
             this.maxRound = 3;
+            this.highestUnlockedRound = 1;
             this.roundStarted = false;
             this.gameOver = false;
             this.canStop = false;
@@ -1122,6 +1123,10 @@
             if (result === 'win') {
               this.lastRoundWinAmount = this.getRoundWinAmount(this.currentRound);
               this.currentWinAmount += this.lastRoundWinAmount;
+
+              if (this.currentRound < this.maxRound) {
+                this.highestUnlockedRound = Math.max(this.highestUnlockedRound, this.currentRound + 1);
+              }
             }
 
             if (result === 'draw') {
@@ -1215,6 +1220,7 @@
             this.currentWinAmount = 0;
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
+            this.highestUnlockedRound = 1;
             this.decisionActive = false;
             this.canGoNext = false;
           }
@@ -1231,6 +1237,7 @@
             this.stakePaid = false;
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
+            this.highestUnlockedRound = 1;
             this.decisionActive = false;
             this.canGoNext = false;
 
@@ -1307,7 +1314,11 @@
             this.showDrawAmount(this.lastDrawAmount, this.lastDrawPercent);
 
             this.time.delayedCall(800, () => {
-              this.prepareDrawReplayScreen();
+              if (this.currentRound < this.highestUnlockedRound) {
+                this.prepareContinueChoiceScreen(true, true);
+              } else {
+                this.prepareDrawReplayScreen();
+              }
             });
           }
 
@@ -1322,6 +1333,7 @@
             this.stakePaid = false;
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
+            this.highestUnlockedRound = 1;
             this.decisionActive = false;
             this.canGoNext = false;
 
@@ -1437,6 +1449,7 @@
             this.stakePaid = false;
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
+            this.highestUnlockedRound = 1;
             this.decisionActive = false;
             this.canGoNext = false;
 
