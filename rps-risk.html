@@ -242,7 +242,7 @@
           }
 
           createVersionText() {
-            this.versionText = this.add.text(40, 38, 'GAME VERSION 1.0', {
+            this.versionText = this.add.text(40, 38, 'GAME VERSION 1.1', {
               fontFamily: 'Arial',
               fontSize: '32px',
               fontStyle: 'bold',
@@ -1084,14 +1084,14 @@
 
           getRoundResultWeights() {
             if (this.currentRound === 1) {
-              return { win: 50, draw: 35, lose: 15 };
+              return { win: 40, draw: 38, lose: 22 };
             }
 
             if (this.currentRound === 2) {
-              return { win: 18, draw: 42, lose: 40 };
+              return { win: 14, draw: 40, lose: 46 };
             }
 
-            return { win: 8, draw: 34, lose: 58 };
+            return { win: 5, draw: 32, lose: 63 };
           }
 
           getWeightedResult() {
