@@ -236,7 +236,7 @@
           }
 
           createVersionText() {
-            this.versionText = this.add.text(40, 38, 'GAME VERSION 0.3', {
+            this.versionText = this.add.text(40, 38, 'GAME VERSION 0.4', {
               fontFamily: 'Arial',
               fontSize: '32px',
               fontStyle: 'bold',
@@ -664,20 +664,20 @@
             const width = this.scale.width;
             const height = this.scale.height;
 
-            this.stopButton = this.add.text(width / 2, height - 235, 'TAKE 0$', {
+            this.stopButton = this.add.text(width / 2, height - 252, 'TAKE 0$', {
               fontFamily: 'Arial',
-              fontSize: '54px',
+              fontSize: '42px',
               fontStyle: 'bold',
               color: '#ffffff',
               backgroundColor: '#000000',
               align: 'center',
-              padding: { left: 30, right: 30, top: 14, bottom: 14 }
+              padding: { left: 24, right: 24, top: 12, bottom: 12 }
             })
               .setOrigin(0.5)
               .setInteractive({ useHandCursor: true })
               .setVisible(false);
 
-            this.stopAmountText = this.add.text(width / 2, height - 105, '', {
+            this.stopAmountText = this.add.text(width / 2, height - 96, '', {
               fontFamily: 'Arial',
               fontSize: '34px',
               fontStyle: 'bold',
@@ -697,9 +697,9 @@
             const width = this.scale.width;
             const height = this.scale.height;
 
-            this.splitButton = this.add.text(width / 2, height - 160, 'SPLIT 50%', {
+            this.splitButton = this.add.text(width / 2, height - 170, 'SPLIT 50%', {
               fontFamily: 'Arial',
-              fontSize: '38px',
+              fontSize: '42px',
               fontStyle: 'bold',
               color: '#ffffff',
               backgroundColor: '#000000',
@@ -777,7 +777,7 @@
             }
 
             if (this.stopAmountText) {
-              this.stopAmountText.setText(`SAFE ${this.safeWinAmount}$   RISK ${this.currentWinAmount}$`);
+              this.stopAmountText.setText(`SAFE ${this.safeWinAmount}$`);
               this.stopAmountText.setVisible(this.canStop || this.safeWinAmount > 0);
             }
 
@@ -1167,7 +1167,8 @@
             if (this.stopAmountText) this.stopAmountText.setVisible(false);
             this.setSplitButtonVisible(false);
             this.hideRoundReward();
-            this.setEnemiesVisible(false);
+            this.updateEnemiesForRound();
+            this.setEnemiesVisible(true);
             this.setChoiceButtonsLockedAfterPick();
 
             if (this.roundText) {
@@ -1373,7 +1374,8 @@
               this.hideWinAmount();
             }
 
-            this.setEnemiesVisible(false);
+            this.updateEnemiesForRound();
+            this.setEnemiesVisible(true);
 
             this.setChoiceButtonsLoseInactive();
           }
