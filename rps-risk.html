@@ -93,6 +93,7 @@
             this.roundRewardText = null;
             this.winAmountText = null;
             this.chooseText = null;
+            this.versionText = null;
 
             this.startButton = null;
             this.nextButton = null;
@@ -181,6 +182,7 @@
 
           create() {
             this.createBackground();
+            this.createVersionText();
             this.createEnemies();
             this.createButtonsHorizontal();
             this.createStopButton();
@@ -230,6 +232,17 @@
             const scale = Math.max(scaleX, scaleY);
 
             bg.setScale(scale).setOrigin(0.5);
+          }
+
+          createVersionText() {
+            this.versionText = this.add.text(40, 38, 'GAME VERSION 0.1', {
+              fontFamily: 'Arial',
+              fontSize: '32px',
+              fontStyle: 'bold',
+              color: '#ffffff'
+            })
+              .setOrigin(0, 0.5)
+              .setDepth(300);
           }
 
           getGameCost() {
