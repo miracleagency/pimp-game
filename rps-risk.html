@@ -90,10 +90,12 @@
             this.enemyCrosses = {};
 
             this.roundText = null;
+            this.roundRewardText = null;
             this.winAmountText = null;
             this.chooseText = null;
 
             this.startButton = null;
+            this.nextButton = null;
             this.costText = null;
             this.stopButton = null;
             this.stopAmountText = null;
@@ -112,6 +114,8 @@
             this.roundStarted = false;
             this.gameOver = false;
             this.canStop = false;
+            this.decisionActive = false;
+            this.canGoNext = false;
 
             this.balance = 1000;
             this.bet = 10;
@@ -182,11 +186,13 @@
             this.createStopButton();
             this.createSplitButton();
             this.createStartButton();
+            this.createNextButton();
             this.createCostText();
             this.createChooseText();
             this.createBalanceText();
             this.createBetText();
             this.createRoundText();
+            this.createRoundRewardText();
             this.createWinAmountText();
 
             this.setChoiceButtonsInitialInactive();
@@ -204,9 +210,11 @@
             font.load().then((loadedFont) => {
               document.fonts.add(loadedFont);
               this.roundText?.setFontFamily('RedRoseCustom');
+              this.roundRewardText?.setFontFamily('RedRoseCustom');
               this.winAmountText?.setFontFamily('RedRoseCustom');
             }).catch(() => {
               this.roundText?.setFontFamily('Arial');
+              this.roundRewardText?.setFontFamily('Arial');
               this.winAmountText?.setFontFamily('Arial');
             });
           }
@@ -283,6 +291,7 @@
             }
 
             this.updateCostText();
+            this.updateRoundRewardText();
           }
 
           toggleBetPanel() {
@@ -487,6 +496,45 @@
               .setDepth(20);
           }
 
+          createRoundRewardText() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.roundRewardText = this.add.text(
+              width / 2,
+              height / 2 + this.roundTextOffsetY + 112,
+              '',
+              {
+                fontFamily: 'Arial',
+                fontSize: '42px',
+                color: '#ffffff',
+                fontStyle: '900',
+                align: 'center'
+              }
+            )
+              .setOrigin(0.5)
+              .setDepth(21);
+
+            this.updateRoundRewardText();
+          }
+
+          updateRoundRewardText() {
+            if (!this.roundRewardText) return;
+
+            const winAmount = this.getRoundWinAmount(this.currentRound);
+            const drawAmount = Math.floor(winAmount * 0.5);
+            this.roundRewardText.setText(`WIN +${winAmount}$   DRAW +${drawAmount}$`);
+          }
+
+          showRoundReward() {
+            this.updateRoundRewardText();
+            this.roundRewardText?.setVisible(true);
+          }
+
+          hideRoundReward() {
+            this.roundRewardText?.setVisible(false);
+          }
+
           createWinAmountText() {
             const width = this.scale.width;
             const height = this.scale.height;
@@ -510,6 +558,7 @@
 
           showWinAmount(amount, prefix = '+') {
             if (this.winAmountText) {
+              this.hideRoundReward();
               this.winAmountText.setText(`${prefix}${amount}$`);
               this.winAmountText.setVisible(true);
             }
@@ -517,6 +566,7 @@
 
           showDrawAmount(amount, percent) {
             if (this.winAmountText) {
+              this.hideRoundReward();
               this.winAmountText.setText(`+${amount}$\n${percent}%`);
               this.winAmountText.setVisible(true);
             }
@@ -736,12 +786,55 @@
               .setInteractive({ useHandCursor: true });
 
             this.startButton.on('pointerdown', () => {
-              if (this.gameOver) {
-                this.restartGame();
-              } else {
-                this.startRound();
-              }
+              this.handleStartButton();
             });
+          }
+
+          createNextButton() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+
+            this.nextButton = this.add.text(width / 2 + 230, height - 360, 'NEXT', {
+              fontFamily: 'Arial',
+              fontSize: '48px',
+              fontStyle: 'bold',
+              color: '#ffffff',
+              backgroundColor: '#000000',
+              padding: { left: 26, right: 26, top: 14, bottom: 14 }
+            })
+              .setOrigin(0.5)
+              .setInteractive({ useHandCursor: true })
+              .setVisible(false);
+
+            this.nextButton.on('pointerdown', () => {
+              this.goNextEnemy();
+            });
+          }
+
+          handleStartButton() {
+            if (this.gameOver) {
+              this.restartGame();
+              return;
+            }
+
+            if (this.decisionActive) {
+              this.replayCurrentEnemy();
+              return;
+            }
+
+            this.startRound();
+          }
+
+          replayCurrentEnemy() {
+            if (!this.decisionActive) return;
+            this.beginChoicePhase();
+          }
+
+          goNextEnemy() {
+            if (!this.decisionActive || !this.canGoNext || this.currentRound >= this.maxRound) return;
+
+            this.currentRound++;
+            this.beginChoicePhase();
           }
 
           createCostText() {
@@ -842,14 +935,18 @@
             this.roundStarted = true;
             this.selected = null;
             this.canStop = false;
+            this.decisionActive = false;
+            this.canGoNext = false;
             this.splitUsedThisDecision = false;
 
             this.hideWinAmount();
+            this.showRoundReward();
 
             this.setEnemiesVisible(false);
             if (this.roundText) this.roundText.setVisible(false);
 
             this.startButton.setVisible(false);
+            this.nextButton.setVisible(false);
             if (this.costText) this.costText.setVisible(false);
 
             this.stopButton.setVisible(false);
@@ -863,10 +960,46 @@
             this.setChoiceButtonsEnabled(true);
           }
 
-          prepareContinueChoiceScreen(showTake = true) {
-            this.roundStarted = true;
+          prepareContinueChoiceScreen(showTake = true, canGoNext = false) {
+            this.roundStarted = false;
             this.selected = null;
             this.canStop = showTake;
+            this.decisionActive = true;
+            this.canGoNext = canGoNext;
+            this.splitUsedThisDecision = false;
+
+            this.clearConfetti();
+            this.clearPickIcons();
+            this.resetChoiceButtons();
+            this.setChoiceButtonsInitialInactive();
+
+            this.updateEnemiesForRound();
+            this.setEnemiesVisible(true);
+
+            if (this.roundText) {
+              this.roundText.setText(`ROUND ${this.currentRound}`);
+              this.roundText.setVisible(true);
+            }
+
+            this.hideWinAmount();
+            this.showRoundReward();
+
+            this.chooseText.setVisible(false);
+
+            this.updateDecisionButtons();
+            if (this.costText) this.costText.setVisible(false);
+
+            this.stopButton.setVisible(showTake);
+            this.setSplitButtonVisible(showTake);
+            this.updateStopButtonText();
+          }
+
+          prepareDrawReplayScreen() {
+            this.roundStarted = true;
+            this.selected = null;
+            this.canStop = true;
+            this.decisionActive = false;
+            this.canGoNext = false;
             this.splitUsedThisDecision = false;
 
             this.clearConfetti();
@@ -883,15 +1016,34 @@
             }
 
             this.hideWinAmount();
+            this.showRoundReward();
 
             this.chooseText.setVisible(false);
-
             this.startButton.setVisible(false);
+            this.startButton.setPosition(this.scale.width / 2, this.scale.height - 285);
+            this.nextButton.setVisible(false);
             if (this.costText) this.costText.setVisible(false);
 
-            this.stopButton.setVisible(showTake);
-            this.setSplitButtonVisible(showTake);
+            this.stopButton.setVisible(true);
+            this.setSplitButtonVisible(true);
             this.updateStopButtonText();
+          }
+
+          updateDecisionButtons() {
+            const width = this.scale.width;
+            const height = this.scale.height;
+            const hasNext = this.canGoNext && this.currentRound < this.maxRound;
+            const currentMultiplier = this.roundMultipliers[this.currentRound];
+
+            this.startButton.setText(`REPLAY x${currentMultiplier}`);
+            this.startButton.setPosition(hasNext ? width / 2 - 230 : width / 2, height - 360);
+            this.startButton.setVisible(true);
+
+            if (this.nextButton) {
+              this.nextButton.setText(hasNext ? `NEXT x${this.roundMultipliers[this.currentRound + 1]}` : 'NEXT');
+              this.nextButton.setPosition(width / 2 + 230, height - 360);
+              this.nextButton.setVisible(hasNext);
+            }
           }
 
           selectButton(type) {
@@ -908,7 +1060,7 @@
 
           getRoundResultWeights() {
             if (this.currentRound === 1) {
-              return { win: 38, draw: 40, lose: 22 };
+              return { win: 50, draw: 35, lose: 15 };
             }
 
             if (this.currentRound === 2) {
@@ -952,6 +1104,7 @@
             const enemyChoice = this.getEnemyChoiceForResult(playerChoice, result);
 
             this.showPickIcons(playerChoice, enemyChoice);
+            this.hideRoundReward();
 
             if (result === 'win') {
               this.lastRoundWinAmount = this.getRoundWinAmount(this.currentRound);
@@ -986,10 +1139,12 @@
             this.clearPickIcons();
             this.chooseText.setVisible(false);
             this.startButton.setVisible(false);
+            this.nextButton.setVisible(false);
             if (this.costText) this.costText.setVisible(false);
             this.stopButton.setVisible(false);
             if (this.stopAmountText) this.stopAmountText.setVisible(false);
             this.setSplitButtonVisible(false);
+            this.hideRoundReward();
             this.setEnemiesVisible(false);
             this.setChoiceButtonsLockedAfterPick();
 
@@ -1002,8 +1157,7 @@
 
             this.time.delayedCall(800, () => {
               if (this.currentRound < this.maxRound) {
-                this.currentRound++;
-                this.prepareContinueChoiceScreen(true);
+                this.prepareContinueChoiceScreen(true, true);
               } else {
                 this.showFinalWinScreen();
               }
@@ -1019,8 +1173,10 @@
             this.clearPickIcons();
             this.chooseText.setVisible(false);
             this.stopButton.setVisible(false);
+            this.nextButton.setVisible(false);
             if (this.stopAmountText) this.stopAmountText.setVisible(false);
             this.setSplitButtonVisible(false);
+            this.hideRoundReward();
 
             this.showFinalWinEnemies();
 
@@ -1035,6 +1191,7 @@
             this.updateBalanceText();
 
             this.startButton.setText('PLAY AGAIN');
+            this.startButton.setPosition(this.scale.width / 2, this.scale.height - 285);
             this.startButton.setVisible(true);
 
             if (this.costText) this.costText.setVisible(false);
@@ -1045,6 +1202,8 @@
             this.currentWinAmount = 0;
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
+            this.decisionActive = false;
+            this.canGoNext = false;
           }
 
           takeWinAndRestart() {
@@ -1059,6 +1218,8 @@
             this.stakePaid = false;
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
+            this.decisionActive = false;
+            this.canGoNext = false;
 
             this.restartGame();
           }
@@ -1116,10 +1277,12 @@
             this.clearPickIcons();
             this.chooseText.setVisible(false);
             this.startButton.setVisible(false);
+            this.nextButton.setVisible(false);
             if (this.costText) this.costText.setVisible(false);
             this.stopButton.setVisible(false);
             if (this.stopAmountText) this.stopAmountText.setVisible(false);
             this.setSplitButtonVisible(false);
+            this.hideRoundReward();
             this.setEnemiesVisible(false);
             this.setChoiceButtonsLockedAfterPick();
 
@@ -1131,7 +1294,7 @@
             this.showDrawAmount(this.lastDrawAmount, this.lastDrawPercent);
 
             this.time.delayedCall(800, () => {
-              this.prepareContinueChoiceScreen(true);
+              this.prepareDrawReplayScreen();
             });
           }
 
@@ -1146,6 +1309,8 @@
             this.stakePaid = false;
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
+            this.decisionActive = false;
+            this.canGoNext = false;
 
             if (safePayout > 0) {
               this.balance += safePayout;
@@ -1153,7 +1318,9 @@
             }
 
             this.startButton.setText('RETRY');
+            this.startButton.setPosition(this.scale.width / 2, this.scale.height - 285);
             this.startButton.setVisible(true);
+            this.nextButton.setVisible(false);
 
             if (this.costText) {
               this.costText.setVisible(false);
@@ -1162,6 +1329,7 @@
             this.stopButton.setVisible(false);
             if (this.stopAmountText) this.stopAmountText.setVisible(false);
             this.setSplitButtonVisible(false);
+            this.hideRoundReward();
 
             this.chooseText.setVisible(false);
 
@@ -1210,6 +1378,8 @@
             this.roundStarted = false;
             this.selected = null;
             this.canStop = showStop;
+            this.decisionActive = false;
+            this.canGoNext = false;
 
             this.clearConfetti();
             this.clearPickIcons();
@@ -1225,11 +1395,14 @@
             }
 
             this.hideWinAmount();
+            this.showRoundReward();
 
             this.chooseText.setVisible(false);
 
             this.startButton.setText(buttonText);
+            this.startButton.setPosition(this.scale.width / 2, this.scale.height - 285);
             this.startButton.setVisible(true);
+            this.nextButton.setVisible(false);
 
             if (this.costText) {
               this.updateCostText();
@@ -1251,6 +1424,8 @@
             this.stakePaid = false;
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
+            this.decisionActive = false;
+            this.canGoNext = false;
 
             if (this.betPanel) {
               this.betPanel.destroy();
