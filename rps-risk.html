@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RPS Risk</title>
+  <title>Камень Ножницы Бумага Риск</title>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
   <style>
     * {
@@ -115,18 +115,12 @@
             this.currentRound = 1;
             this.maxRound = 3;
             this.highestUnlockedRound = 1;
-            this.defeatedEnemies = {
-              1: false,
-              2: false,
-              3: false
-            };
             this.roundStarted = false;
             this.gameOver = false;
             this.finalWinComplete = false;
             this.canStop = false;
             this.decisionActive = false;
             this.canGoNext = false;
-            this.replayRaisesMultiplier = false;
 
             this.balance = 1000;
             this.bet = 10;
@@ -142,26 +136,8 @@
             this.lastDrawAmount = 0;
             this.lastRoundWinAmount = 0;
 
-            this.roundStartMultipliers = {
-              1: 1,
-              2: 5,
-              3: 10
-            };
-
             this.roundMultipliers = {
               1: 1,
-              2: 5,
-              3: 10
-            };
-
-            this.roundMultiplierSteps = {
-              1: 1,
-              2: 1,
-              3: 5
-            };
-
-            this.roundMaxMultipliers = {
-              1: 5,
               2: 10,
               3: 20
             };
@@ -266,7 +242,7 @@
           }
 
           createVersionText() {
-            this.versionText = this.add.text(40, 38, 'GAME VERSION 1.2', {
+            this.versionText = this.add.text(40, 38, 'ВЕРСИЯ ИГРЫ 1.1', {
               fontFamily: 'Arial',
               fontSize: '32px',
               fontStyle: 'bold',
@@ -284,38 +260,10 @@
             return this.getGameCost() * this.roundMultipliers[round];
           }
 
-          resetRoundMultipliers() {
-            this.roundMultipliers = { ...this.roundStartMultipliers };
-          }
-
-          resetDefeatedEnemies() {
-            this.defeatedEnemies = {
-              1: false,
-              2: false,
-              3: false
-            };
-          }
-
-          getReplayMultiplier(round = this.currentRound) {
-            if (!this.replayRaisesMultiplier) return this.roundMultipliers[round];
-
-            return Math.min(
-              this.roundMultipliers[round] + this.roundMultiplierSteps[round],
-              this.roundMaxMultipliers[round]
-            );
-          }
-
-          increaseReplayMultiplier(round = this.currentRound) {
-            this.roundMultipliers[round] = Math.min(
-              this.roundMultipliers[round] + this.roundMultiplierSteps[round],
-              this.roundMaxMultipliers[round]
-            );
-          }
-
           createBalanceText() {
             const height = this.scale.height;
 
-            this.balanceText = this.add.text(40, height - 80, `BALANCE: ${this.balance}$`, {
+            this.balanceText = this.add.text(40, height - 80, `БАЛАНС: ${this.balance}$`, {
               fontFamily: 'Arial',
               fontSize: '42px',
               fontStyle: 'bold',
@@ -333,7 +281,7 @@
 
           updateBalanceText() {
             if (this.balanceText) {
-              this.balanceText.setText(`BALANCE: ${this.balance}$`);
+              this.balanceText.setText(`БАЛАНС: ${this.balance}$`);
             }
           }
 
@@ -341,7 +289,7 @@
             const width = this.scale.width;
             const height = this.scale.height;
 
-            this.betText = this.add.text(width - 40, height - 80, `BET: ${this.bet}$`, {
+            this.betText = this.add.text(width - 40, height - 80, `СТАВКА: ${this.bet}$`, {
               fontFamily: 'Arial',
               fontSize: '42px',
               fontStyle: 'bold',
@@ -359,7 +307,7 @@
 
           updateBetText() {
             if (this.betText) {
-              this.betText.setText(`BET: ${this.bet}$`);
+              this.betText.setText(`СТАВКА: ${this.bet}$`);
             }
 
             this.updateCostText();
@@ -384,7 +332,7 @@
 
             const bg = this.add.rectangle(0, 0, 520, 680, 0x000000, 0.88).setOrigin(0.5);
 
-            const title = this.add.text(0, -295, 'SELECT BET', {
+            const title = this.add.text(0, -295, 'ВЫБЕРИ СТАВКУ', {
               fontFamily: 'Arial',
               fontSize: '44px',
               fontStyle: 'bold',
@@ -556,7 +504,7 @@
             this.roundText = this.add.text(
               width / 2 + this.roundTextOffsetX,
               height / 2 + this.roundTextOffsetY,
-              `ROUND ${this.currentRound}`,
+              `РАУНД ${this.currentRound}`,
               {
                 fontFamily: 'Arial',
                 fontSize: '110px',
@@ -595,7 +543,7 @@
 
             const winAmount = this.getRoundWinAmount(this.currentRound);
             const drawAmount = Math.floor(winAmount * 0.5);
-            this.roundRewardText.setText(`WIN +${winAmount}$   DRAW +${drawAmount}$`);
+            this.roundRewardText.setText(`ПОБЕДА +${winAmount}$   НИЧЬЯ +${drawAmount}$`);
           }
 
           showRoundReward() {
@@ -654,7 +602,7 @@
             const width = this.scale.width;
             const height = this.scale.height;
 
-            this.chooseText = this.add.text(width / 2, height / 2 + this.chooseTextOffsetY, 'Choose', {
+            this.chooseText = this.add.text(width / 2, height / 2 + this.chooseTextOffsetY, 'Выбор', {
               fontFamily: 'Arial',
               fontSize: '86px',
               fontStyle: 'bold',
@@ -722,7 +670,7 @@
             const width = this.scale.width;
             const height = this.scale.height;
 
-            this.stopButton = this.add.text(width / 2, height - 252, 'TAKE 0$', {
+            this.stopButton = this.add.text(width / 2, height - 252, 'ЗАБРАТЬ 0$', {
               fontFamily: 'Arial',
               fontSize: '42px',
               fontStyle: 'bold',
@@ -755,7 +703,7 @@
             const width = this.scale.width;
             const height = this.scale.height;
 
-            this.splitButton = this.add.text(width / 2, height - 170, 'SPLIT 50%', {
+            this.splitButton = this.add.text(width / 2, height - 170, 'СЕЙФ 50%', {
               fontFamily: 'Arial',
               fontSize: '42px',
               fontStyle: 'bold',
@@ -797,7 +745,7 @@
 
             const originalY = this.splitButton.y;
             this.splitButton.setColor('#00ff88');
-            this.splitButton.setText(`SAFE +${amount}$`);
+            this.splitButton.setText(`В СЕЙФ +${amount}$`);
 
             this.tweens.add({
               targets: this.splitButton,
@@ -824,18 +772,18 @@
 
             const canSplit = this.canStop && !this.splitUsedThisDecision && !this.splitUsedThisGame && this.currentWinAmount >= 2;
             const splitAmount = Math.floor(this.currentWinAmount * 0.5);
-            this.splitButton.setText(canSplit ? `SPLIT 50%  +${splitAmount}$ SAFE` : 'SPLIT USED');
+            this.splitButton.setText(canSplit ? `СЕЙФ 50%  +${splitAmount}$` : 'СЕЙФ ИСП.');
             this.splitButton.setColor(canSplit ? '#ffffff' : '#888888');
             this.splitButton.setAlpha(canSplit ? 1 : 0.45);
           }
 
           updateStopButtonText() {
             if (this.stopButton) {
-              this.stopButton.setText(`TAKE ${this.getTotalTakeAmount()}$`);
+              this.stopButton.setText(`ЗАБРАТЬ ${this.getTotalTakeAmount()}$`);
             }
 
             if (this.stopAmountText) {
-              this.stopAmountText.setText(`SAFE ${this.safeWinAmount}$`);
+              this.stopAmountText.setText(`СЕЙФ ${this.safeWinAmount}$`);
               this.stopAmountText.setVisible(this.canStop || this.safeWinAmount > 0);
             }
 
@@ -846,7 +794,7 @@
             const width = this.scale.width;
             const height = this.scale.height;
 
-            this.startButton = this.add.text(width / 2, height - 285, 'START', {
+            this.startButton = this.add.text(width / 2, height - 285, 'СТАРТ', {
               fontFamily: 'Arial',
               fontSize: '54px',
               fontStyle: 'bold',
@@ -866,7 +814,7 @@
             const width = this.scale.width;
             const height = this.scale.height;
 
-            this.nextButton = this.add.text(width / 2 + 230, height - 360, 'NEXT', {
+            this.nextButton = this.add.text(width / 2 + 230, height - 360, 'ДАЛЬШЕ', {
               fontFamily: 'Arial',
               fontSize: '48px',
               fontStyle: 'bold',
@@ -899,11 +847,6 @@
 
           replayCurrentEnemy() {
             if (!this.decisionActive) return;
-
-            if (this.replayRaisesMultiplier) {
-              this.increaseReplayMultiplier();
-            }
-
             this.beginChoicePhase();
           }
 
@@ -911,7 +854,6 @@
             if (!this.decisionActive || !this.canGoNext || this.currentRound >= this.maxRound) return;
 
             this.currentRound++;
-            this.replayRaisesMultiplier = false;
             this.beginChoicePhase();
           }
 
@@ -919,7 +861,7 @@
             const width = this.scale.width;
             const height = this.scale.height;
 
-            this.costText = this.add.text(width / 2, height - 220, `COST: ${this.getGameCost()}$`, {
+            this.costText = this.add.text(width / 2, height - 220, `ЦЕНА: ${this.getGameCost()}$`, {
               fontFamily: 'Arial',
               fontSize: '34px',
               fontStyle: 'bold',
@@ -931,7 +873,7 @@
 
           updateCostText() {
             if (this.costText) {
-              this.costText.setText(`COST: ${this.getGameCost()}$`);
+              this.costText.setText(`ЦЕНА: ${this.getGameCost()}$`);
             }
           }
 
@@ -1015,7 +957,6 @@
             this.canStop = false;
             this.decisionActive = false;
             this.canGoNext = false;
-            this.replayRaisesMultiplier = false;
             this.splitUsedThisDecision = false;
 
             this.hideWinAmount();
@@ -1024,7 +965,7 @@
             this.updateEnemiesForRound();
             this.setEnemiesVisible(true);
             if (this.roundText) {
-              this.roundText.setText(`ROUND ${this.currentRound}`);
+              this.roundText.setText(`РАУНД ${this.currentRound}`);
               this.roundText.setVisible(true);
             }
 
@@ -1043,13 +984,12 @@
             this.setChoiceButtonsEnabled(true);
           }
 
-          prepareContinueChoiceScreen(showTake = true, canGoNext = false, replayRaisesMultiplier = false) {
+          prepareContinueChoiceScreen(showTake = true, canGoNext = false) {
             this.roundStarted = false;
             this.selected = null;
             this.canStop = showTake;
             this.decisionActive = true;
             this.canGoNext = canGoNext;
-            this.replayRaisesMultiplier = replayRaisesMultiplier;
             this.splitUsedThisDecision = false;
 
             this.clearConfetti();
@@ -1061,7 +1001,7 @@
             this.setEnemiesVisible(true);
 
             if (this.roundText) {
-              this.roundText.setText(`ROUND ${this.currentRound}`);
+              this.roundText.setText(`РАУНД ${this.currentRound}`);
               this.roundText.setVisible(true);
             }
 
@@ -1084,7 +1024,6 @@
             this.canStop = true;
             this.decisionActive = false;
             this.canGoNext = false;
-            this.replayRaisesMultiplier = false;
             this.splitUsedThisDecision = false;
 
             this.clearConfetti();
@@ -1096,7 +1035,7 @@
             this.setEnemiesVisible(true);
 
             if (this.roundText) {
-              this.roundText.setText(`ROUND ${this.currentRound}`);
+              this.roundText.setText(`РАУНД ${this.currentRound}`);
               this.roundText.setVisible(true);
             }
 
@@ -1118,14 +1057,14 @@
             const width = this.scale.width;
             const height = this.scale.height;
             const hasNext = this.canGoNext && this.currentRound < this.maxRound;
-            const replayMultiplier = this.getReplayMultiplier(this.currentRound);
+            const currentMultiplier = this.roundMultipliers[this.currentRound];
 
-            this.startButton.setText(`REPLAY x${replayMultiplier}`);
+            this.startButton.setText(`ПОВТОР x${currentMultiplier}`);
             this.startButton.setPosition(hasNext ? width / 2 - 230 : width / 2, height - 360);
             this.startButton.setVisible(true);
 
             if (this.nextButton) {
-              this.nextButton.setText(hasNext ? `NEXT x${this.roundStartMultipliers[this.currentRound + 1]}` : 'NEXT');
+              this.nextButton.setText(hasNext ? `ДАЛЬШЕ x${this.roundMultipliers[this.currentRound + 1]}` : 'ДАЛЬШЕ');
               this.nextButton.setPosition(width / 2 + 230, height - 360);
               this.nextButton.setVisible(hasNext);
             }
@@ -1198,8 +1137,6 @@
               if (this.currentRound < this.maxRound) {
                 this.highestUnlockedRound = Math.max(this.highestUnlockedRound, this.currentRound + 1);
               }
-
-              this.defeatedEnemies[this.currentRound] = true;
             }
 
             if (result === 'draw') {
@@ -1236,7 +1173,7 @@
             this.setChoiceButtonsLockedAfterPick();
 
             if (this.roundText) {
-              this.roundText.setText('YOU WIN');
+              this.roundText.setText('ПОБЕДА');
               this.roundText.setVisible(true);
             }
 
@@ -1244,9 +1181,7 @@
 
             this.time.delayedCall(800, () => {
               if (this.currentRound < this.maxRound) {
-                this.prepareContinueChoiceScreen(true, true, true);
-              } else if (this.roundMultipliers[this.currentRound] < this.roundMaxMultipliers[this.currentRound]) {
-                this.prepareContinueChoiceScreen(true, false, true);
+                this.prepareContinueChoiceScreen(true, true);
               } else {
                 this.showFinalWinScreen();
               }
@@ -1271,7 +1206,7 @@
             this.spawnConfetti();
 
             if (this.roundText) {
-              this.roundText.setText('YOU WIN');
+              this.roundText.setText('ПОБЕДА');
               this.roundText.setVisible(true);
             }
 
@@ -1280,7 +1215,7 @@
             this.balance += this.getTotalTakeAmount();
             this.updateBalanceText();
 
-            this.startButton.setText('PLAY AGAIN');
+            this.startButton.setText('ИГРАТЬ ЕЩЕ');
             this.startButton.setPosition(this.scale.width / 2, this.scale.height - 285);
             this.startButton.setVisible(true);
 
@@ -1293,9 +1228,6 @@
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
             this.highestUnlockedRound = 1;
-            this.replayRaisesMultiplier = false;
-            this.resetRoundMultipliers();
-            this.resetDefeatedEnemies();
             this.decisionActive = false;
             this.canGoNext = false;
           }
@@ -1314,9 +1246,6 @@
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
             this.highestUnlockedRound = 1;
-            this.replayRaisesMultiplier = false;
-            this.resetRoundMultipliers();
-            this.resetDefeatedEnemies();
             this.decisionActive = false;
             this.canGoNext = false;
 
@@ -1386,15 +1315,15 @@
             this.setChoiceButtonsLockedAfterPick();
 
             if (this.roundText) {
-              this.roundText.setText('DRAW');
+              this.roundText.setText('НИЧЬЯ');
               this.roundText.setVisible(true);
             }
 
             this.showDrawAmount(this.lastDrawAmount, this.lastDrawPercent);
 
             this.time.delayedCall(800, () => {
-              if (this.defeatedEnemies[this.currentRound]) {
-                this.prepareContinueChoiceScreen(true, this.currentRound < this.maxRound, false);
+              if (this.currentRound < this.highestUnlockedRound) {
+                this.prepareContinueChoiceScreen(true, true);
               } else {
                 this.prepareDrawReplayScreen();
               }
@@ -1414,9 +1343,6 @@
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
             this.highestUnlockedRound = 1;
-            this.replayRaisesMultiplier = false;
-            this.resetRoundMultipliers();
-            this.resetDefeatedEnemies();
             this.decisionActive = false;
             this.canGoNext = false;
 
@@ -1425,7 +1351,7 @@
               this.updateBalanceText();
             }
 
-            this.startButton.setText('RETRY');
+            this.startButton.setText('ЕЩЕ РАЗ');
             this.startButton.setPosition(this.scale.width / 2, this.scale.height - 285);
             this.startButton.setVisible(true);
             this.nextButton.setVisible(false);
@@ -1442,12 +1368,12 @@
             this.chooseText.setVisible(false);
 
             if (this.roundText) {
-              this.roundText.setText('YOU LOSE');
+              this.roundText.setText('ПРОИГРЫШ');
               this.roundText.setVisible(true);
             }
 
             if (safePayout > 0) {
-              this.showWinAmount(safePayout, 'SAFE +');
+              this.showWinAmount(safePayout, 'СЕЙФ +');
             } else {
               this.hideWinAmount();
             }
@@ -1509,7 +1435,6 @@
             this.canStop = showStop;
             this.decisionActive = false;
             this.canGoNext = false;
-            this.replayRaisesMultiplier = false;
 
             this.clearConfetti();
             this.clearPickIcons();
@@ -1520,7 +1445,7 @@
             this.setEnemiesVisible(true);
 
             if (this.roundText) {
-              if (!this.gameOver) this.roundText.setText(`ROUND ${this.currentRound}`);
+              if (!this.gameOver) this.roundText.setText(`РАУНД ${this.currentRound}`);
               this.roundText.setVisible(true);
             }
 
@@ -1556,9 +1481,6 @@
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
             this.highestUnlockedRound = 1;
-            this.replayRaisesMultiplier = false;
-            this.resetRoundMultipliers();
-            this.resetDefeatedEnemies();
             this.decisionActive = false;
             this.canGoNext = false;
 
@@ -1570,12 +1492,12 @@
             this.clearConfetti();
 
             if (this.roundText) {
-              this.roundText.setText('ROUND 1');
+              this.roundText.setText('РАУНД 1');
             }
 
             this.hideWinAmount();
 
-            this.resetToRoundScreen('START', false);
+            this.resetToRoundScreen('СТАРТ', false);
           }
 
           resetChoiceButtons() {
