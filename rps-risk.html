@@ -115,12 +115,18 @@
             this.currentRound = 1;
             this.maxRound = 3;
             this.highestUnlockedRound = 1;
+            this.defeatedEnemies = {
+              1: false,
+              2: false,
+              3: false
+            };
             this.roundStarted = false;
             this.gameOver = false;
             this.finalWinComplete = false;
             this.canStop = false;
             this.decisionActive = false;
             this.canGoNext = false;
+            this.replayRaisesMultiplier = false;
 
             this.balance = 1000;
             this.bet = 10;
@@ -136,8 +142,26 @@
             this.lastDrawAmount = 0;
             this.lastRoundWinAmount = 0;
 
+            this.roundStartMultipliers = {
+              1: 1,
+              2: 5,
+              3: 10
+            };
+
             this.roundMultipliers = {
               1: 1,
+              2: 5,
+              3: 10
+            };
+
+            this.roundMultiplierSteps = {
+              1: 1,
+              2: 1,
+              3: 5
+            };
+
+            this.roundMaxMultipliers = {
+              1: 5,
               2: 10,
               3: 20
             };
@@ -242,7 +266,7 @@
           }
 
           createVersionText() {
-            this.versionText = this.add.text(40, 38, 'GAME VERSION 1.1', {
+            this.versionText = this.add.text(40, 38, 'GAME VERSION 1.2', {
               fontFamily: 'Arial',
               fontSize: '32px',
               fontStyle: 'bold',
@@ -258,6 +282,34 @@
 
           getRoundWinAmount(round = this.currentRound) {
             return this.getGameCost() * this.roundMultipliers[round];
+          }
+
+          resetRoundMultipliers() {
+            this.roundMultipliers = { ...this.roundStartMultipliers };
+          }
+
+          resetDefeatedEnemies() {
+            this.defeatedEnemies = {
+              1: false,
+              2: false,
+              3: false
+            };
+          }
+
+          getReplayMultiplier(round = this.currentRound) {
+            if (!this.replayRaisesMultiplier) return this.roundMultipliers[round];
+
+            return Math.min(
+              this.roundMultipliers[round] + this.roundMultiplierSteps[round],
+              this.roundMaxMultipliers[round]
+            );
+          }
+
+          increaseReplayMultiplier(round = this.currentRound) {
+            this.roundMultipliers[round] = Math.min(
+              this.roundMultipliers[round] + this.roundMultiplierSteps[round],
+              this.roundMaxMultipliers[round]
+            );
           }
 
           createBalanceText() {
@@ -847,6 +899,11 @@
 
           replayCurrentEnemy() {
             if (!this.decisionActive) return;
+
+            if (this.replayRaisesMultiplier) {
+              this.increaseReplayMultiplier();
+            }
+
             this.beginChoicePhase();
           }
 
@@ -854,6 +911,7 @@
             if (!this.decisionActive || !this.canGoNext || this.currentRound >= this.maxRound) return;
 
             this.currentRound++;
+            this.replayRaisesMultiplier = false;
             this.beginChoicePhase();
           }
 
@@ -957,6 +1015,7 @@
             this.canStop = false;
             this.decisionActive = false;
             this.canGoNext = false;
+            this.replayRaisesMultiplier = false;
             this.splitUsedThisDecision = false;
 
             this.hideWinAmount();
@@ -984,12 +1043,13 @@
             this.setChoiceButtonsEnabled(true);
           }
 
-          prepareContinueChoiceScreen(showTake = true, canGoNext = false) {
+          prepareContinueChoiceScreen(showTake = true, canGoNext = false, replayRaisesMultiplier = false) {
             this.roundStarted = false;
             this.selected = null;
             this.canStop = showTake;
             this.decisionActive = true;
             this.canGoNext = canGoNext;
+            this.replayRaisesMultiplier = replayRaisesMultiplier;
             this.splitUsedThisDecision = false;
 
             this.clearConfetti();
@@ -1024,6 +1084,7 @@
             this.canStop = true;
             this.decisionActive = false;
             this.canGoNext = false;
+            this.replayRaisesMultiplier = false;
             this.splitUsedThisDecision = false;
 
             this.clearConfetti();
@@ -1057,14 +1118,14 @@
             const width = this.scale.width;
             const height = this.scale.height;
             const hasNext = this.canGoNext && this.currentRound < this.maxRound;
-            const currentMultiplier = this.roundMultipliers[this.currentRound];
+            const replayMultiplier = this.getReplayMultiplier(this.currentRound);
 
-            this.startButton.setText(`REPLAY x${currentMultiplier}`);
+            this.startButton.setText(`REPLAY x${replayMultiplier}`);
             this.startButton.setPosition(hasNext ? width / 2 - 230 : width / 2, height - 360);
             this.startButton.setVisible(true);
 
             if (this.nextButton) {
-              this.nextButton.setText(hasNext ? `NEXT x${this.roundMultipliers[this.currentRound + 1]}` : 'NEXT');
+              this.nextButton.setText(hasNext ? `NEXT x${this.roundStartMultipliers[this.currentRound + 1]}` : 'NEXT');
               this.nextButton.setPosition(width / 2 + 230, height - 360);
               this.nextButton.setVisible(hasNext);
             }
@@ -1137,16 +1198,14 @@
               if (this.currentRound < this.maxRound) {
                 this.highestUnlockedRound = Math.max(this.highestUnlockedRound, this.currentRound + 1);
               }
+
+              this.defeatedEnemies[this.currentRound] = true;
             }
 
             if (result === 'draw') {
               this.lastDrawPercent = 50;
               this.lastDrawAmount = Math.floor(this.getRoundWinAmount(this.currentRound) * 0.5);
               this.currentWinAmount += this.lastDrawAmount;
-            }
-
-            if (result === 'win' && this.currentRound === this.maxRound) {
-              this.spawnConfetti();
             }
 
             this.time.delayedCall(900, () => {
@@ -1185,7 +1244,9 @@
 
             this.time.delayedCall(800, () => {
               if (this.currentRound < this.maxRound) {
-                this.prepareContinueChoiceScreen(true, true);
+                this.prepareContinueChoiceScreen(true, true, true);
+              } else if (this.roundMultipliers[this.currentRound] < this.roundMaxMultipliers[this.currentRound]) {
+                this.prepareContinueChoiceScreen(true, false, true);
               } else {
                 this.showFinalWinScreen();
               }
@@ -1207,6 +1268,7 @@
             this.hideRoundReward();
 
             this.showFinalWinEnemies();
+            this.spawnConfetti();
 
             if (this.roundText) {
               this.roundText.setText('YOU WIN');
@@ -1231,6 +1293,9 @@
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
             this.highestUnlockedRound = 1;
+            this.replayRaisesMultiplier = false;
+            this.resetRoundMultipliers();
+            this.resetDefeatedEnemies();
             this.decisionActive = false;
             this.canGoNext = false;
           }
@@ -1249,6 +1314,9 @@
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
             this.highestUnlockedRound = 1;
+            this.replayRaisesMultiplier = false;
+            this.resetRoundMultipliers();
+            this.resetDefeatedEnemies();
             this.decisionActive = false;
             this.canGoNext = false;
 
@@ -1325,8 +1393,8 @@
             this.showDrawAmount(this.lastDrawAmount, this.lastDrawPercent);
 
             this.time.delayedCall(800, () => {
-              if (this.currentRound < this.highestUnlockedRound) {
-                this.prepareContinueChoiceScreen(true, true);
+              if (this.defeatedEnemies[this.currentRound]) {
+                this.prepareContinueChoiceScreen(true, this.currentRound < this.maxRound, false);
               } else {
                 this.prepareDrawReplayScreen();
               }
@@ -1346,6 +1414,9 @@
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
             this.highestUnlockedRound = 1;
+            this.replayRaisesMultiplier = false;
+            this.resetRoundMultipliers();
+            this.resetDefeatedEnemies();
             this.decisionActive = false;
             this.canGoNext = false;
 
@@ -1438,6 +1509,7 @@
             this.canStop = showStop;
             this.decisionActive = false;
             this.canGoNext = false;
+            this.replayRaisesMultiplier = false;
 
             this.clearConfetti();
             this.clearPickIcons();
@@ -1484,6 +1556,9 @@
             this.splitUsedThisDecision = false;
             this.splitUsedThisGame = false;
             this.highestUnlockedRound = 1;
+            this.replayRaisesMultiplier = false;
+            this.resetRoundMultipliers();
+            this.resetDefeatedEnemies();
             this.decisionActive = false;
             this.canGoNext = false;
 
